@@ -1,0 +1,46 @@
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+class NetworkImageCustom extends StatefulWidget {
+  final String imageUrl;
+  final double size;
+
+  const NetworkImageCustom({required this.imageUrl, required this.size, Key? key}) : super(key: key);
+
+  @override
+  _NetworkImageCustomState createState() => _NetworkImageCustomState();
+}
+
+class _NetworkImageCustomState extends State<NetworkImageCustom> {
+  String? sessionId;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSessionId();
+  }
+
+  Future<void> _loadSessionId() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      sessionId = prefs.getString('session_id');
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return CircleAvatar(
+      radius: widget.size, // Set the radius to half the size
+      backgroundImage: sessionId != null
+          ? CachedNetworkImageProvider(
+        widget.imageUrl,
+        headers: {
+          'Cookie': 'session_id=$sessionId',
+        },
+      )
+          : null,
+      child: sessionId == null ? CircularProgressIndicator() : null, // Show loader while fetching session_id
+    );
+  }
+}

@@ -1,0 +1,90 @@
+class PartnerInfoModel {
+  final int id;
+  final String name;
+  final String image;
+  final String clientType;
+  final String companyType;
+  final String city;
+  final String countryId;
+  final String territoryId;
+  final String speciality;
+  final String clientAttitude;
+  final List<ProductTag> productTags;
+  final int noPotential;
+  final int targetVisit;
+
+  PartnerInfoModel({
+    required this.id,
+    required this.name,
+    required this.image,
+    required this.clientType,
+    required this.companyType,
+    required this.city,
+    required this.countryId,
+    required this.territoryId,
+    required this.speciality,
+    required this.clientAttitude,
+    required this.productTags,
+    required this.noPotential,
+    required this.targetVisit,
+  });
+
+  factory PartnerInfoModel.fromJson(Map<String, dynamic> json) {
+    return PartnerInfoModel(
+      id: json['id'],
+      name: json['name'],
+      image: json['image'],
+      clientType: json['client_type'],
+      companyType: json['company_type'],
+      city: json['city'],
+      countryId: json['country_id'],
+      territoryId: json['territory_id'],
+      speciality: json['speciality'],
+      clientAttitude: json['client_attitude'],
+      productTags: (json['product_tags'] as List)
+          .map((tag) => ProductTag.fromJson(tag))
+          .toList(),
+      noPotential: json['no_potential'],
+      targetVisit: json['target_visit'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'image': image,
+      'client_type': clientType,
+      'company_type': companyType,
+      'city': city,
+      'country_id': countryId,
+      'territory_id': territoryId,
+      'speciality': speciality,
+      'client_attitude': clientAttitude,
+      'product_tags': productTags.map((tag) => tag.toJson()).toList(),
+      'no_potential': noPotential,
+      'target_visit': targetVisit,
+    };
+  }
+}
+
+class ProductTag {
+  final int id;
+  final String name;
+
+  ProductTag({required this.id, required this.name});
+
+  factory ProductTag.fromJson(Map<String, dynamic> json) {
+    return ProductTag(
+      id: json['id'],
+      name: json['name'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+    };
+  }
+}
