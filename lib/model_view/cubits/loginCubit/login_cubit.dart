@@ -63,32 +63,26 @@ class LoginCubit extends Cubit<LoginState> {
     try {
       final dio = Dio();
 
-      // لالتقاط الكوكيز بما في ذلك الـ session_id
       dio.interceptors.add(InterceptorsWrapper(
         onResponse: (response, handler) async {
-          // استخراج الكوكيز من الاستجابة
           var cookies = response.headers['set-cookie'];
           if (cookies != null) {
             String? sessionId;
-            String? cookieString; // متغير لحفظ الـ cookie
+            String? cookieString;
             for (var cookie in cookies) {
               if (cookie.contains('session_id')) {
-                // استخراج session_id من الكوكيز
                 sessionId = cookie.split(';')[0].split('=')[1];
               }
-              // احفظ جميع الكوكيز كـ string
-              cookieString = cookie; // يمكنك تخصيص كيف تريد حفظ الكوكيز
+              cookieString = cookie;
             }
 
             if (sessionId != null) {
-              // حفظ session_id وcookie في SharedPreferences
               final prefs = await SharedPreferences.getInstance();
               await prefs.setString('session_id', sessionId);
-              await prefs.setString('cookie', cookieString!); // حفظ الكوكيز هنا
+              await prefs.setString('cookie', cookieString!);
               DialToast.showToast("All your Data Saved Secure", Colors.green);
             }
           }
-
           return handler.next(response);
         },
       ));
@@ -113,10 +107,13 @@ class LoginCubit extends Cubit<LoginState> {
         await prefs.setString('sessionData', jsonEncode(userModel.toJson()));
         await prefs.setString('storedUrl', url);
 
-        // هنا حفظ الكوكيز بعد الـ response
-        final cookie = response.headers['set-cookie']?.first; // استخراج أول cookie
+        // Save specialities
+        await prefs.setStringList('speciality_names', List<String>.from(response.data['speciality_names']));
+        await prefs.setString('speciality_ids', jsonEncode(response.data['speciality_ids']));
+
+        final cookie = response.headers['set-cookie']?.first;
         if (cookie != null) {
-          await prefs.setString('cookie', cookie); // حفظ الكوكيز
+          await prefs.setString('cookie', cookie);
         }
 
         if (keepMeSignedIn) {

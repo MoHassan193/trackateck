@@ -9,6 +9,7 @@ class UserModel {
   final String representativeType;
   final int rank;
 
+
   UserModel({
     required this.uid,
     required this.lang,

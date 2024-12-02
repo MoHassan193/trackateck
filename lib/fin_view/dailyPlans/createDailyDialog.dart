@@ -75,7 +75,6 @@ class _CreateDailyDialogState extends State<CreateDailyDialog> {
       'territory_ids' : '[${_territoryIds.join(',')}]',
       'attendance' : _attendanceController.text,
       'date' : DateFormat('yyyy-MM-dd').format(selectedDate!),
-
     };
     final dio = Dio();
     final response = await dio.put('$url/api/create_daily',
@@ -140,6 +139,9 @@ class _CreateDailyDialogState extends State<CreateDailyDialog> {
   final GlobalKey<DropdownSearchState<int>> dropDownKey = GlobalKey();
 
   Widget _buildTerritoryDropdown() {
+    TextEditingController _searchController = TextEditingController(); // Controller for the search field
+    List<dynamic> _filteredTerritoryData = []; // To hold the filtered data
+
     return BlocProvider(
       create: (context) => TerritoryCubit()..fetchTerritories(),
       child: BlocBuilder<TerritoryCubit, TerritoryState>(
@@ -147,26 +149,116 @@ class _CreateDailyDialogState extends State<CreateDailyDialog> {
           if (state is TerritoryLoading) {
             return Center(child: CircularProgressIndicator());
           } else if (state is TerritoryLoaded) {
+            // Use the loaded territories data
+            final territoryData = state.territories;
+
+            // Filter the territories based on search input
+            _filteredTerritoryData = territoryData
+                .where((territory) => territory.name.toLowerCase().contains(_searchController.text.toLowerCase()))
+                .toList();
+
             return Column(
               children: [
-                DropdownButtonFormField<int>(
-                  decoration: InputDecoration(labelText: ' Territory'),
-                  value: _territoryIds.isNotEmpty ? _territoryIds.first : null,
-                  onChanged: (int? newValue) {
-                    setState(() {
-                      if (newValue != null && !_territoryIds.contains(newValue)) {
-                        _territoryIds.add(newValue);
-                      }
-                    });
-                  },
-                  items: state.territories.map((territory) {
-                    return DropdownMenuItem<int>(
-                      value: territory.id,
-                      child: Text(territory.name,style: TextStyle(fontSize: 9),),
-                    );
-                  }).toList(),
+                // Dropdown Search Field
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _searchController,
+                        readOnly: true,
+                        decoration: InputDecoration(
+                          labelText: 'Select Territory',
+                        ),
+                        onTap: () {
+                          showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true, // Allows more space for the modal
+                            builder: (BuildContext context) {
+                              return StatefulBuilder(
+                                builder: (BuildContext context, StateSetter setState) {
+                                  return Padding(
+                                    padding: EdgeInsets.all(8.0),
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Padding(
+                                          padding: const EdgeInsets.all(8.0),
+                                          child: TextField(
+                                            controller: _searchController,
+                                            decoration: InputDecoration(
+                                              hintText: 'Search',
+                                              suffixIcon: IconButton(
+                                                icon: Icon(Icons.close),
+                                                onPressed: () {
+                                                  _searchController.clear();
+                                                  setState(() {
+                                                    _filteredTerritoryData = territoryData;
+                                                  });
+                                                },
+                                              ),
+                                              border: OutlineInputBorder(),
+                                            ),
+                                            onChanged: (value) {
+                                              setState(() {
+                                                _filteredTerritoryData = territoryData
+                                                    .where((territory) => territory.name.toLowerCase().contains(value.toLowerCase()))
+                                                    .toList();
+                                              });
+                                            },
+                                          ),
+                                        ),
+                                        Expanded(
+                                          child: ListView.builder(
+                                            shrinkWrap: true,
+                                            itemCount: _filteredTerritoryData.length,
+                                            itemBuilder: (context, index) {
+                                              var territory = _filteredTerritoryData[index];
+                                              return ListTile(
+                                                title: Text(territory.name),
+                                                trailing: Checkbox(
+                                                  value: _territoryIds.contains(territory.id),
+                                                  onChanged: (bool? selected) {
+                                                    setState(() {
+                                                      if (selected == true) {
+                                                        _territoryIds.add(territory.id); // Add the selected territory ID
+                                                      } else {
+                                                        _territoryIds.remove(territory.id); // Remove if unchecked
+                                                      }
+                                                    });
+                                                  },
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                        ),
+                                        SizedBox(height: 10),
+                                        ElevatedButton(
+                                          onPressed: () {
+                                            Navigator.pop(context); // Close the modal after finishing selection
+                                          },
+                                          child: Text('Done'),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              );
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.refresh, color: Colors.blue, size: 22),
+                      onPressed: () {
+                        // Refresh data
+                        context.read<TerritoryCubit>().fetchTerritories();
+                      },
+                    ),
+                  ],
                 ),
-                // قائمة العناصر المحددة
+
+                // Display Selected Territories List
                 Column(
                   children: _territoryIds.map((id) {
                     final territory = state.territories.firstWhere((t) => t.id == id);

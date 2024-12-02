@@ -41,6 +41,7 @@ class EditPartnerPlan extends StatefulWidget {
 class _EditPartnerPlanState extends State<EditPartnerPlan> {
   late UserModel _userModel;
   bool _isLoading1 = false;
+  bool isReset =  false;
   // Controllers for each field
   final TextEditingController partnerNameController = TextEditingController();
   final TextEditingController territoryIdController = TextEditingController();
@@ -108,9 +109,9 @@ class _EditPartnerPlanState extends State<EditPartnerPlan> {
 
 
     final request = {
-      'partner_latitude': widget.latitude ?? 0,
-      'partner_longitude': widget.longitude ?? 0,
-      'website': websiteController.text.isNotEmpty ? websiteController.text : null,
+      'partner_latitude': isReset ? 0 : widget.latitude,
+      'partner_longitude': isReset ? 0 : widget.longitude,
+      'website': websiteController.text.isNotEmpty ? websiteController.text : widget.partnerData['website']?.toString() ?? null,
       'zip': zipController.text.isNotEmpty ? zipController.text : null,
       'vat': vatController.text.isNotEmpty ? vatController.text : null,
       'type': 'contact',
@@ -118,24 +119,24 @@ class _EditPartnerPlanState extends State<EditPartnerPlan> {
       'territory_id': territoryIdController.text.isNotEmpty ? int.tryParse(territoryIdController.text) : null,
       'suitable_time': selectedTime ?? null,
       'suitable_day': selectedDayName ?? null,
-      'street2': street2Controller.text.isNotEmpty ? street2Controller.text : null,
-      'street': streetController.text.isNotEmpty ? streetController.text : null,
+      'street2': street2Controller.text.isNotEmpty ? street2Controller.text :widget.partnerData['street2']?.toString() ?? null,
+      'street': streetController.text.isNotEmpty ? streetController.text : widget.partnerData['street']?.toString() ?? null,
       'state_id': _stateIdController.text.isNotEmpty ? int.tryParse(_stateIdController.text) : null,
       'speciality': _specialityIdController.text.isNotEmpty ? int.tryParse(_specialityIdController.text) : null,
       'ref': refController.text.isNotEmpty ? refController.text : null,
       'rank': null,
-      'phone': phoneController.text.isNotEmpty ? phoneController.text : null,
-      'name': partnerNameController.text.isNotEmpty ? partnerNameController.text : null,
-      'mobile': mobileController.text.isNotEmpty ? mobileController.text : null,
+      'phone': phoneController.text.isNotEmpty ? phoneController.text : widget.partnerData['phone']?.toString() ?? null,
+      'name': partnerNameController.text.isNotEmpty ? partnerNameController.text : widget.partnerData['name']?.toString() ?? null,
+      'mobile': mobileController.text.isNotEmpty ? mobileController.text : widget.partnerData['mobile']?.toString() ?? null,
       'file_path': widget.partnerData['image'] != null ? widget.partnerData['image'] : null,
       'function': functionController.text.isNotEmpty ? functionController.text : null,
       'country_id': _countryIdController.text.isNotEmpty ? int.tryParse(_countryIdController.text) : null,
-      'comment': commentController.text.isNotEmpty ? commentController.text : null,
+      'comment': commentController.text.isNotEmpty ? commentController.text : widget.partnerData['comment']?.toString() ?? null,
       'client_type': selectedClientType ?? null,
       'client_kind': selectedClientKind ?? null,
       'client_attitude': selectedAttitude ?? null,
       'classification': _classificationIdController.text.isNotEmpty ? int.tryParse(_classificationIdController.text) : null,
-      'city': cityController.text.isNotEmpty ? cityController.text : null,
+      'city': cityController.text.isNotEmpty ? cityController.text : widget.partnerData['city']?.toString() ?? null,
       'behave_style_id': _behavioralStyleIdController.text.isNotEmpty ? int.tryParse(_behavioralStyleIdController.text) : null,
       'barcode': barcodeController.text.isNotEmpty ? barcodeController.text : null,
     };
@@ -272,31 +273,183 @@ class _EditPartnerPlanState extends State<EditPartnerPlan> {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // SizedBox(height: 15),
-              // // Add more TextFormFields for other fields as needed
-              // if (_selectedImage == null) OutlinedButton(
-              //   onPressed: pickImage,
-              //   child: Text("  Pick Image  "),
-              // ),
-              // if (_selectedImage != null)
-              //   CircleAvatar(
-              //     backgroundImage: FileImage(_selectedImage!),
-              //     radius: 40,
-              //   ),
+
               SizedBox(height: 15),
-              _buildTextField(partnerNameController, "Partner Name", (widget.partnerData['name'] != null && widget.partnerData['name'] != false) ? (widget.partnerData['name'] ?? '') : 'No Data in This Field'),
-              _buildTextField(cityController, "City", (widget.partnerData['city'] != null && widget.partnerData['city'] != false) ? (widget.partnerData['city'] ?? '') : 'No Data in This Field'),
-              _buildTextField(commentController, "Comment", (widget.partnerData['comment'] != null && widget.partnerData['comment'] != false) ? (widget.partnerData['comment'].toString() ?? '') : 'No Data in This Field'),
-              _buildTextField(phoneController, "Phone", (widget.partnerData['phone'] != null && widget.partnerData['phone'] != false) ? (widget.partnerData['phone'].toString() ?? '') : 'No Data in This Field'),
-              _buildTextField(mobileController, "Mobile", (widget.partnerData['mobile'] != null && widget.partnerData['mobile'] != false) ? (widget.partnerData['mobile'].toString() ?? '') : 'No Data in This Field'),
-              _buildTextField(websiteController, "Website", (widget.partnerData['website'] != null && widget.partnerData['website'] != false) ? (widget.partnerData['website'].toString() ?? '') : 'No Data in This Field'),
-              _buildTextField(streetController, "Street", (widget.partnerData['street'] != null && widget.partnerData['street'] != false) ? (widget.partnerData['street'].toString() ?? '') : 'No Data in This Field'),
-              _buildTextField(street2Controller, "Street 2", (widget.partnerData['street2'] != null && widget.partnerData['street2'] != false) ? (widget.partnerData['street2'].toString() ?? '') : 'No Data in This Field'),
-              _buildTextField(vatController, "VAT",''),
-              _buildTextField(zipController, "ZIP",''),
-              _buildTextField(barcodeController, "Barcode",''),
-              _buildTextField(functionController, 'function',''),
-              _buildTextField(refController, "Ref",''),
+              TextFormField(
+                controller: partnerNameController,
+                decoration: InputDecoration(
+                  labelText: widget.partnerData!['name'].toString(),
+                  hintText: "Partner Name",
+                  suffixIcon: IconButton(
+                    onPressed: () {
+                      partnerNameController.clear();
+                    },
+                    icon: Icon(Icons.clear),
+                  ),
+                ),
+              ),
+              SizedBox(height: 8),
+              TextFormField(
+                controller: cityController,
+                decoration: InputDecoration(
+                  labelText: widget.partnerData!['city'].toString(),
+                  hintText: "City",
+                  suffixIcon: IconButton(
+                    onPressed: () {
+                      cityController.clear();
+                    },
+                    icon: Icon(Icons.clear),
+                  ),
+                ),
+              ),
+              SizedBox(height: 8),
+              TextFormField(
+                controller: commentController,
+                decoration: InputDecoration(
+                  hintText: "Comment",
+                  suffixIcon: IconButton(
+                    onPressed: () {
+                      commentController.clear();
+                    },
+                    icon: Icon(Icons.clear),
+                  ),
+                ),
+              ),
+              SizedBox(height: 8),
+              TextFormField(
+                controller: phoneController,
+                decoration: InputDecoration(
+                  labelText: widget.partnerData!['mobile'].toString(),
+                  hintText: "Phone",
+                  suffixIcon: IconButton(
+                    onPressed: () {
+                      phoneController.clear();
+                    },
+                    icon: Icon(Icons.clear),
+                  ),
+                ),
+              ),
+              SizedBox(height: 8),
+              TextFormField(
+                controller: mobileController,
+                decoration: InputDecoration(
+                  labelText: widget.partnerData!['mobile'].toString(),
+                  hintText: "Mobile",
+                  suffixIcon: IconButton(
+                    onPressed: () {
+                      mobileController.clear();
+                    },
+                    icon: Icon(Icons.clear),
+                  ),
+                ),
+              ),
+              SizedBox(height: 8),
+              TextFormField(
+                controller: websiteController,
+                decoration: InputDecoration(
+                  hintText: "Website",
+                  suffixIcon: IconButton(
+                    onPressed: () {
+                      websiteController.clear();
+                    },
+                    icon: Icon(Icons.clear),
+                  ),
+                ),
+              ),
+              SizedBox(height: 8),
+              TextFormField(
+                controller: streetController,
+                decoration: InputDecoration(
+                  labelText: widget.partnerData!['street'].toString(),
+                  hintText: "Street",
+                  suffixIcon: IconButton(
+                    onPressed: () {
+                      streetController.clear();
+                    },
+                    icon: Icon(Icons.clear),
+                  ),
+                ),
+              ),
+              SizedBox(height: 8),
+              TextFormField(
+                controller: street2Controller,
+                decoration: InputDecoration(
+                  labelText: widget.partnerData!['street2'].toString(),
+                  hintText: "Street 2",
+                  suffixIcon: IconButton(
+                    onPressed: () {
+                      street2Controller.clear();
+                    },
+                    icon: Icon(Icons.clear),
+                  ),
+                ),
+              ),
+              SizedBox(height: 8),
+              TextFormField(
+                controller: vatController,
+                decoration: InputDecoration(
+                  hintText: "VAT",
+                  suffixIcon: IconButton(
+                    onPressed: () {
+                      vatController.clear();
+                    },
+                    icon: Icon(Icons.clear),
+                  ),
+                ),
+              ),
+              SizedBox(height: 8),
+              TextFormField(
+                controller: zipController,
+                decoration: InputDecoration(
+                  hintText: "ZIP",
+                  suffixIcon: IconButton(
+                    onPressed: () {
+                      zipController.clear();
+                    },
+                    icon: Icon(Icons.clear),
+                  ),
+                ),
+              ),
+              SizedBox(height: 8),
+              TextFormField(
+                controller: barcodeController,
+                decoration: InputDecoration(
+                  hintText: "Barcode",
+                  suffixIcon: IconButton(
+                    onPressed: () {
+                      barcodeController.clear();
+                    },
+                    icon: Icon(Icons.clear),
+                  ),
+                ),
+              ),
+              SizedBox(height: 8),
+              TextFormField(
+                controller: functionController,
+                decoration: InputDecoration(
+                  hintText: "Function",
+                  suffixIcon: IconButton(
+                    onPressed: () {
+                      functionController.clear();
+                    },
+                    icon: Icon(Icons.clear),
+                  ),
+                ),
+              ),
+              SizedBox(height: 8),
+              TextFormField(
+                controller: refController,
+                decoration: InputDecoration(
+                  hintText: "Ref",
+                  suffixIcon: IconButton(
+                    onPressed: () {
+                      refController.clear();
+                    },
+                    icon: Icon(Icons.clear),
+                  ),
+                ),
+              ),
+
               ListTile(
                 title: Text(selectedDayName ?? "Select Suitable Day"),
                 trailing: Icon(Icons.calendar_month),
@@ -386,6 +539,7 @@ class _EditPartnerPlanState extends State<EditPartnerPlan> {
                 }).toList(),
               ),
               SizedBox(height: 10),
+              _buildResetLocation(),
               SizedBox(height: 25),
               SizedBox(
                   width: double.infinity,
@@ -663,6 +817,35 @@ class _EditPartnerPlanState extends State<EditPartnerPlan> {
       ),
     );
   }
+
+  Widget _buildResetLocation() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          'Reset Location',
+          style: TextStyle(
+            color: isReset ? Colors.blue.shade800 : Colors.black, // تغيير اللون بناءً على حالة الـ checkbox
+          ),
+        ),
+        Checkbox(
+          shape: RoundedRectangleBorder(),
+          side: BorderSide(
+            color: Colors.black, // لون البوردر أسود
+            width: 2.0,          // سمك البوردر
+          ),
+          checkColor: Colors.blue.shade800,
+          value: isReset,
+          onChanged: (bool? value) {
+            setState(() {
+              isReset = value ?? false;
+            });
+          },
+        ),
+      ],
+    );
+  }
+
 
   Widget _buildBehavioralStylesDropdown() {
     return BlocProvider(

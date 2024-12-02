@@ -10,7 +10,7 @@ class DialToast {
         msg: msg,
         toastLength: Toast.LENGTH_SHORT,
         gravity: ToastGravity.CENTER,
-        timeInSecForIosWeb: 1,
+        timeInSecForIosWeb: 2,
         backgroundColor:  color,
         textColor: Colors.white,
         fontSize: 16.0

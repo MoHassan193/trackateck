@@ -1,13 +1,10 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // استيراد مكتبة SharedPreferences
 import 'package:url_launcher/url_launcher.dart';
 import 'package:visit_man/model/commonWidget/networkImageCustom/networkImageCustom.dart';
 import 'package:visit_man/model/utils/move.dart';
 import 'package:visit_man/model/utils/sizes.dart';
-
 import '../../model/dialToast.dart';
 import '../../model_view/cubits/mainCubitofWidget/partnerInfoCubit/partnerInfoCubit.dart';
 import '../../model_view/cubits/mainCubitofWidget/partnerInfoCubit/partnerInfoState.dart';
@@ -23,35 +20,12 @@ class FnPatnersScreen extends StatefulWidget {
 
 class _FnPatnersScreenState extends State<FnPatnersScreen> with RouteAware {
   String searchText = '';
-  List<dynamic> partnerData = [];
   final RouteObserver<PageRoute> routeObserver = RouteObserver<PageRoute>();
 
   @override
   void initState() {
     super.initState();
-    _loadPartnerData(); // تحميل البيانات المحفوظة عند بدء الشاشة
     _fetchData(); // استدعاء التحديث عند الدخول الأول للصفحة
-  }
-
-  // تحميل بيانات الشركاء المحفوظة من SharedPreferences
-  Future<void> _loadPartnerData() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? savedData = prefs.getString('partnerData');
-    if (savedData != null) {
-      setState(() {
-        partnerData = json.decode(savedData);
-      });
-    }
-  }
-
-  // حفظ بيانات الشركاء في SharedPreferences
-  Future<void> _savePartnerData(List<dynamic> data) async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    prefs.setString('partnerData', json.encode(data));
-  }
-
-  bool _isDataDifferent(List<dynamic> newData) {
-    return json.encode(newData) != json.encode(partnerData);
   }
 
   @override
@@ -86,15 +60,15 @@ class _FnPatnersScreenState extends State<FnPatnersScreen> with RouteAware {
 
     return Scaffold(
       appBar: AppBar(
-        actions: [
-          IconButton(
-            onPressed: () {
-              Move.move(context, CreatePartnerPlan());
-            },
-            icon: Icon(Icons.add, color: Colors.white),
-          ),
-          SizedBox(height: 10)
-        ],
+        // actions: [
+        //   IconButton(
+        //     onPressed: () {
+        //       Move.move(context, CreatePartnerPlan());
+        //     },
+        //     icon: Icon(Icons.add, color: Colors.white),
+        //   ),
+        //   SizedBox(height: 10)
+        // ],
         centerTitle: true,
         title: Text("Contacts", style: TextStyle(color: Colors.white)),
       ),
@@ -104,37 +78,17 @@ class _FnPatnersScreenState extends State<FnPatnersScreen> with RouteAware {
           builder: (context, state) {
             return RefreshIndicator(
               onRefresh: () async {
-                await _fetchData(); // استدعاء إعادة تحميل البيانات عند السحب
+                final cubit = BlocProvider.of<PartnerInfoCubit>(context);
+                await cubit.AllfetchPartnerInfo(); // استدعاء إعادة تحميل البيانات عند السحب
               },
               child: Builder(
                 builder: (context) {
                   if (state is AllPartnerInfoLoading) {
-                    if (partnerData.isNotEmpty) {
-                      return _buildPartnerList(context, height);
-                    } else {
-                      return Padding(
-                        padding: EdgeInsets.all(MoSizes.defaultSpace(context)),
-                        child: Center(
-                          child: Container(
-                            height: 100,
-                            padding: EdgeInsets.all(8),
-                            width: double.infinity,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: Colors.cyan, width: 2),
-                            ),
-                            child: const Center(child: CircularProgressIndicator()),
-                          ),
-                        ),
-                      );
-                    }
+                    return Center(child: CircularProgressIndicator());
                   } else if (state is AllPartnerInfoLoadedRaw) {
-                    if (_isDataDifferent(state.partnerData)) {
-                      partnerData = state.partnerData;
-                      _savePartnerData(partnerData); // حفظ البيانات الجديدة في SharedPreferences
-                    }
-                    return _buildPartnerList(context, height);
+                    // بيانات الشركاء من الـ API
+                    final partnerData = state.partnerData;
+                    return _buildPartnerList(context, height, partnerData);
                   } else if (state is AllPartnerInfoError) {
                     return Center(child: Text("No Data Available"));
                   } else {
@@ -150,7 +104,7 @@ class _FnPatnersScreenState extends State<FnPatnersScreen> with RouteAware {
   }
 
   // دالة لبناء قائمة الشركاء
-  Widget _buildPartnerList(BuildContext context, double height) {
+  Widget _buildPartnerList(BuildContext context, double height, List<dynamic> partnerData) {
     // تصفية البيانات بناءً على النص المدخل في حقل البحث
     final filteredPartnerData = partnerData.where((partner) {
       return (partner['name'] ?? '').toLowerCase().contains(searchText.toLowerCase());
@@ -187,7 +141,6 @@ class _FnPatnersScreenState extends State<FnPatnersScreen> with RouteAware {
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(color: Colors.cyan, width: 2),
-
                       ),
                       child: ListTile(
                         onTap: () => Navigator.push(
@@ -250,6 +203,24 @@ class _FnPatnersScreenState extends State<FnPatnersScreen> with RouteAware {
                                 ],
                               ),
                             ),
+                            Text(
+                              "Latitude : ${partner['partner_latitude'].toStringAsFixed(2)}",
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black,
+                              ),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              "Longitude : ${partner['partner_longitude'].toStringAsFixed(2)}",
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black,
+                              ),
+                            ),
+                            SizedBox(height: 6),
                           ],
                         ),
                       ),
@@ -261,7 +232,7 @@ class _FnPatnersScreenState extends State<FnPatnersScreen> with RouteAware {
             separatorBuilder: (context, index) => Column(
               children: [
                 SizedBox(height: height * 0.02),
-                Divider(height: 2, color: Colors.grey,indent: 50,endIndent: 50,),
+                Divider(height: 2, color: Colors.grey, indent: 50, endIndent: 50),
                 SizedBox(height: height * 0.02),
               ],
             ),
@@ -271,6 +242,7 @@ class _FnPatnersScreenState extends State<FnPatnersScreen> with RouteAware {
       ],
     );
   }
+
 
   void showCallDialog(BuildContext context, String mobile) {
     showDialog(

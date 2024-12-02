@@ -51,7 +51,7 @@ final TextEditingController _userIdController = TextEditingController();
   @override
   void initState() {
     final mapCubit = MapCubit.get(context);
-
+    _getVisitCompleted();
     mapCubit.loadAndSendCoordinates();
     super.initState();
     _loadVisitData();
@@ -59,6 +59,18 @@ final TextEditingController _userIdController = TextEditingController();
     tabController = TabController(length: 4, vsync: this); // 3 tabs in this case
   }
 
+  bool visitCompleted = false;
+
+// دالة لاسترجاع قيمة visitCompleted
+  Future<void> _getVisitCompleted() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    bool? isVisitCompleted = prefs.getBool('visit_${widget.visitId}_completed');
+    if (isVisitCompleted != null) {
+      setState(() {
+        visitCompleted = isVisitCompleted;
+      });
+    }
+  }
 
   late UserModel _userModel; // إضافة UserModel
 
@@ -155,19 +167,8 @@ final TextEditingController _userIdController = TextEditingController();
       child: Scaffold(
         appBar: AppBar(
           backgroundColor: Colors.white,
-          leading: IconButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            icon: Icon(Icons.arrow_back, color: Colors.blue, size: 25),
-          ),
-          title: Text(
-            "Visit Card",
-            style: TextStyle(color: Colors.blue),
-          ),
-          centerTitle: true,
           bottom: PreferredSize(
-            preferredSize: Size.fromHeight(450), // تحديد الارتفاع المطلوب
+            preferredSize: Size.fromHeight(480), // تحديد الارتفاع المطلوب
             child: Padding(
               padding: EdgeInsets.only(
                 right: MoSizes.md(context),
@@ -181,7 +182,6 @@ final TextEditingController _userIdController = TextEditingController();
                       borderRadius: BorderRadius.circular(25),
                       border: Border.all(color: Colors.cyan, width: 2),
                     ),
-                    padding: EdgeInsets.all(8),
                     child: ListTile(
                       onTap: () => Navigator.push(
                         context,
@@ -332,7 +332,7 @@ final TextEditingController _userIdController = TextEditingController();
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        _buildDoubleVisitSwitch(),
+                       visitCompleted ? CenterTitleWidget(title: "Visit Completed") : _buildDoubleVisitSwitch(),
                         SizedBox(height: 10,),
                         if (_isDoubleVisit) ...[
                           _buildDoubleVisitTypeDropdown(),

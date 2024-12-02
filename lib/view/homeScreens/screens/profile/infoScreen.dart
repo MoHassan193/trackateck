@@ -88,6 +88,7 @@ class _MyInfoPageState extends State<MyInfoPage> {
     final tz = data['tz'] ?? 'No time zone';
     final representativeType = data['representative_type'] ?? 'No representative type';
     final territories = data['territory_ids'] as List<dynamic>? ?? [];
+    final specialities = data['speciality_names'] as List<dynamic>? ?? [];
 
     return Padding(
       padding: EdgeInsets.all(16),
@@ -103,15 +104,16 @@ class _MyInfoPageState extends State<MyInfoPage> {
                 ),
               ),
             SizedBox(height: 16),
-            _buildInfoContainer(width, height, name, 20,Icons.person),
+            _buildInfoContainer(width, height, name, 20, Icons.person),
             SizedBox(height: 10),
-            _buildInfoContainer(width, height, email, 18,Icons.email,),
+            _buildInfoContainer(width, height, email, 18, Icons.email),
             SizedBox(height: 10),
-            _buildInfoContainer(width, height, tz, 18,Icons.location_on),
+            _buildInfoContainer(width, height, tz, 18, Icons.location_on),
             SizedBox(height: 10),
-            _buildInfoContainer(width, height, phone, 18,Icons.phone),
+            _buildInfoContainer(width, height, phone, 18, Icons.phone),
             SizedBox(height: 10),
-            _buildInfoContainer(width, height, representativeType, 18,representativeType == "medical" ? Icons.medical_services : Icons.sell_outlined),
+            _buildInfoContainer(width, height, representativeType, 18,
+                representativeType == "medical" ? Icons.medical_services : Icons.sell_outlined),
             SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
@@ -125,32 +127,40 @@ class _MyInfoPageState extends State<MyInfoPage> {
                 ),
               ),
             ),
-            SizedBox(height: 15,),
+            SizedBox(height: 15),
             SizedBox(
               width: double.infinity,
               child: OutlinedButton(
-                style:OutlinedButton.styleFrom(
-                backgroundColor: Colors.red,
+                onPressed: () {
+                  _showSpecialitiesModal(context, specialities);
+                },
+                child: Text(
+                  'Specialities',
+                  style: TextStyle(fontSize: 18, color: Colors.blue),
+                ),
+              ),
+            ),
+            SizedBox(height: 15),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                style: OutlinedButton.styleFrom(
+                  backgroundColor: Colors.red,
                 ),
                 onPressed: () async {
                   final prefs = await SharedPreferences.getInstance();
-        
-                  // الحصول على جميع المفاتيح
                   final keys = prefs.getKeys();
-        
-                  // إزالة جميع البيانات باستثناء المفاتيح المحددة
                   for (String key in keys) {
-                    if (!['storedEmail', 'storedPassword', 'storedDatabase', 'storedUrl','isFirstLaunch'].contains(key)) {
+                    if (!['storedEmail', 'storedPassword', 'storedDatabase', 'storedUrl', 'isFirstLaunch']
+                        .contains(key)) {
                       await prefs.remove(key);
                     }
                   }
-        
-                  // إعادة توجيه المستخدم إلى صفحة تسجيل الدخول
                   Navigator.pushReplacement(
                     context,
-                    MaterialPageRoute(builder: (context) => LoginScreen()), // استبدل `LoginPage` باسم صفحتك
+                    MaterialPageRoute(builder: (context) => LoginScreen()),
                   );
-                  DialToast.showToast("Logout Successfuly", Colors.green);
+                  DialToast.showToast("Logout Successfully", Colors.green);
                 },
                 child: Text(
                   'LogOut',
@@ -158,13 +168,45 @@ class _MyInfoPageState extends State<MyInfoPage> {
                 ),
               ),
             ),
-            SizedBox(height: 10,)
+            SizedBox(height: 10),
           ],
         ),
       ),
     );
   }
 
+  void _showSpecialitiesModal(BuildContext context, List<dynamic> specialities) {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return Container(
+          padding: EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Specialities',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 16),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: specialities.length,
+                  itemBuilder: (context, index) {
+                    return ListTile(
+                      leading: Icon(Icons.medical_services),
+                      title: Text(specialities[index].toString()),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
   Widget _buildInfoContainer(double width, double height, String text, double fontSize,IconData icon) {
     return Container(
       width: double.infinity,

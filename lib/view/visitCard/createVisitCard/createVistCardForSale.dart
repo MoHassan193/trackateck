@@ -49,7 +49,13 @@ class _SaleCreateVisitCardState extends State<SaleCreateVisitCard> {
   final TextEditingController _monthlyPlanIdController = TextEditingController();
   String? selectedTerritoryId;
   String? selectedPartnerId;
+  final TextEditingController lastVisitTitleController = TextEditingController();
+  final TextEditingController lastVisitDateController = TextEditingController();
+  final TextEditingController lastVisitDurationController = TextEditingController();
 
+  String? lastVisitTitle;
+  String? lastVisitDate;
+  String? lastVisitDuration;
   // List to hold multiple product and objective IDs
   List<int> _productIds = [];
   List<int> _leaveBehindIds = [];
@@ -467,69 +473,217 @@ class _SaleCreateVisitCardState extends State<SaleCreateVisitCard> {
 
   // دالة لإنشاء قائمة من Dropdown للشركاء
   Widget _buildPartnerDropdown(String id) {
+    TextEditingController _searchController = TextEditingController(); // Controller for the search field
+    List<dynamic> _filteredPartnerData = []; // To hold the filtered data
+
     return BlocProvider(
       create: (context) => PartnerInfoCubit()..fetchPartnerInfo(id),
-      child: BlocBuilder<PartnerInfoCubit, PartnerInfoState>(
-        builder: (context, state) {
-          if (state is PartnerInfoLoading) {
-            return Center(child: CircularProgressIndicator());
-          } else if (state is PartnerInfoLoadedRaw) {
-            final partnerData = state.partnerData
-                .where((partner) => partner['territory_id'] == _selectedTerritoryName && partner['client_type'] == 'pharmacy')
-                .toList(); // تصفية الشركاء بناءً على territory_id
+      child: BlocBuilder<PartnerInfoCubit, PartnerInfoState>(builder: (context, state) {
+        if (state is PartnerInfoLoading) {
+          return Center(child: CircularProgressIndicator());
+        } else if (state is PartnerInfoLoadedRaw) {
+          // Filter partners by territory_id
+          final partnerData = state.partnerData
+              .where((partner) => partner['territory_id'] == _selectedTerritoryName && partner['client_type'] == 'pharmacy')
+              .toList();
 
-            return Row(
-              children: [
-                Expanded(
-                  child: DropdownButtonFormField<int>(
-                    decoration: InputDecoration(labelText: 'Select Partner'),
-                    // تحقق مما إذا كان _partnerIdController فارغًا
-                    value: _partnerIdController.text.isNotEmpty
-                        ? int.tryParse(_partnerIdController.text)
-                        : null, // اجعل القيمة فارغة إذا كان _partnerIdController فارغًا
-                    onChanged: (int? newValue) {
-                      setState(() {
-                        if (newValue != null) {
-                          _partnerIdController.text = newValue.toString();
-                        } else {
-                          _partnerIdController.clear(); // يمكنك استخدام هذا إذا أردت مسح القيمة في حالة الاختيار.
-                        }
-                      });
-                    },
-                    items: partnerData.map<DropdownMenuItem<int>>((partner) {
-                      return DropdownMenuItem<int>(
-                        value: int.tryParse(partner['id'].toString()), // تأكد من تحويل id إلى int
-                        child: Text(partner['name']),
-                      );
-                    }).toList(),
-                  ),
-                ),
-                IconButton(
-                  icon: Icon(Icons.add, color: Colors.blue),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => CreatePartnerPlan(
-                      )),
-                    );
-                  },
-                ),
-                IconButton(
-                  icon: Icon(Icons.refresh, color: Colors.blue),
-                  onPressed: () {
-                    // Refresh data
-                    context.read<PartnerInfoCubit>().fetchPartnerInfo(id);
-                  },
-                ),
-              ],
-            );
-
-          } else if (state is PartnerInfoError) {
-            return Center(child: Text('No Data Found'));
+          // Function to save partner data
+          Future<void> _savePartnerData(List<dynamic> data) async {
+            SharedPreferences prefs = await SharedPreferences.getInstance();
+            prefs.setString('datapartnerforcreatevisit', json.encode(data)); // Use the specified key
           }
-          return Center(child: Text('No data available'));
-        },
-      ),
+
+          // Function to check if data is different
+          bool _isDataDifferent(List<dynamic> newData) {
+            return json.encode(newData) != json.encode(partnerData);
+          }
+
+          // Check if the data is different and save it
+          if (_isDataDifferent(partnerData)) {
+            _savePartnerData(partnerData);
+          }
+          if(partnerData.isEmpty){
+            return Center(child:Text("No Contact Found For Selected Territory"));
+          }
+
+          return Column(
+            children: [
+              TextField(
+                controller: _searchController,
+                readOnly: true,
+                decoration: InputDecoration(
+                  labelText: 'Select Contact',
+                ),
+                onTap: () {
+                  showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true, // السماح للشاشة بأخذ العرض الكامل
+                    builder: (BuildContext context) {
+                      return StatefulBuilder(
+                        builder: (BuildContext context, StateSetter setState) {
+                          // Filter partner data based on search input
+                          _filteredPartnerData = partnerData
+                              .where((partner) => partner['name']
+                              .toLowerCase()
+                              .contains(_searchController.text.toLowerCase()))
+                              .toList();
+
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 16.0, bottom: 32.0), // لضمان مسافة مناسبة أعلى وأسفل الشاشة
+                            child: Column(
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16.0), // مسافة حول TextField
+                                  child: TextField(
+                                    controller: _searchController,
+                                    decoration: InputDecoration(
+                                      hintText: 'Search',
+                                      suffixIcon: IconButton(
+                                        icon: Icon(Icons.close),
+                                        onPressed: () {
+                                          _searchController.clear();
+                                          setState(() {
+                                            _filteredPartnerData = partnerData; // إعادة تعيين البيانات بعد الإزالة
+                                          });
+                                        },
+                                      ),
+                                      border: OutlineInputBorder(),
+                                    ),
+                                    onChanged: (value) {
+                                      setState(() {
+                                        _filteredPartnerData = partnerData
+                                            .where((partner) => partner['name']
+                                            .toLowerCase()
+                                            .contains(value.toLowerCase()))
+                                            .toList();
+                                        lastVisitTitleController.clear();
+                                        lastVisitDurationController.clear();
+                                        lastVisitDateController.clear();
+                                      });
+                                    },
+                                  ),
+                                ),
+                                SizedBox(height: 10.0), // مسافة بين حقل البحث والقائمة
+                                Expanded(
+                                  child: ListView.builder(
+                                    padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0), // مسافات داخلية للقائمة
+                                    itemCount: _filteredPartnerData.length,
+                                    itemBuilder: (context, index) {
+                                      var partner = _filteredPartnerData[index];
+                                      return Padding(
+                                        padding: const EdgeInsets.symmetric(vertical: 4.0), // مسافة بين كل عنصر
+                                        child: ListTile(
+                                          contentPadding: EdgeInsets.all(8.0), // مسافة داخلية لكل ListTile
+                                          title: Text(
+                                            partner['name'],
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.blue,
+                                            ),
+                                          ),
+                                          subtitle: Text(
+                                            partner['last_visit_title'].toString(),
+                                            style: TextStyle(
+                                              fontSize: 14.0,
+                                              color: Colors.black,
+                                            ),
+                                          ),
+                                          trailing: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.end,
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              Text(
+                                                partner['last_visit_date'].toString(),
+                                                style: TextStyle(
+                                                  fontSize: 12.0,
+                                                  color: Colors.blue,
+                                                ),
+                                              ),
+                                              SizedBox(height: 4.0),
+                                              Text(
+                                                double.parse(partner['last_visit_duration'].toString()).toStringAsFixed(2),
+                                                style: TextStyle(
+                                                  fontSize: 11.0,
+                                                  fontWeight: FontWeight.w500,
+                                                  color: Colors.blueGrey.shade800,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          onTap: () {
+                                            setState(() {
+                                              _partnerIdController.text = partner['id'].toString();
+                                              _searchController.text = partner['name'];
+                                              lastVisitTitleController.text = partner['last_visit_title'].toString();
+                                              lastVisitDateController.text = partner['last_visit_date'].toString();
+                                              lastVisitDurationController.text = double.parse(partner['last_visit_duration'].toString()).toStringAsFixed(2);
+                                              lastVisitTitle = partner['last_visit_title'].toString();
+                                              lastVisitDate = partner['last_visit_date'].toString();
+                                              lastVisitDuration = double.parse(partner['last_visit_duration'].toString()).toStringAsFixed(2);
+                                            });
+                                            Navigator.pop(context);
+                                          },
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  );
+                },
+              ),
+              // IconButton(
+              //   icon: Icon(Icons.add, color: Colors.blue, size: 22),
+              //   onPressed: () {
+              //     Navigator.push(
+              //       context,
+              //       MaterialPageRoute(builder: (context) => CreatePartnerPlan()),
+              //     );
+              //   },
+              // ),
+              // IconButton(
+              //   icon: Icon(Icons.refresh, color: Colors.blue, size: 22),
+              //   onPressed: () {
+              //     // Refresh data
+              //     context.read<PartnerInfoCubit>().fetchPartnerInfo(id);
+              //   },
+              // ),
+              SizedBox(height: 5,),
+              Container(
+                padding : EdgeInsets.all(12),
+                margin: EdgeInsets.all(12),
+                width: MediaQuery.of(context).size.width * 0.85,
+                decoration: BoxDecoration(
+                  color: Color(0xFFbfcfdb),
+                  borderRadius: BorderRadius.circular(25),
+                  border: Border.all(color: Colors.black, width: 1),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SizedBox(height: 4,),
+                    Text('   ${lastVisitTitleController.text.toString()}   ',style:TextStyle(color: Colors.black)),
+                    SizedBox(height: 4,),
+                    Text('   ${lastVisitDateController.text.toString()}   ',style:TextStyle(color: Colors.black)),
+                    SizedBox(height: 4,),
+                    Text('   ${lastVisitDurationController.text.toString()}   ',style:TextStyle(color: Colors.black)),
+                  ],
+                ),
+              ),
+            ],
+          );
+        } else if (state is PartnerInfoError) {
+          return Center(child: Text('No Data Found.'));
+        }
+        return Center(child: Text('No Data Found'));
+      }),
     );
   }
   // متغير للاحتفاظ باسم المنطقة المختارة

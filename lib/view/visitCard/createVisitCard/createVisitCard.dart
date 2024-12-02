@@ -51,9 +51,14 @@ class _CreateVisitCardPageState extends State<CreateVisitCardPage> {
   final TextEditingController _userIdController = TextEditingController();
   final TextEditingController _partnerNameController = TextEditingController();
   final TextEditingController _monthlyPlanIdController = TextEditingController();
+  final TextEditingController lastVisitTitleController = TextEditingController();
+  final TextEditingController lastVisitDateController = TextEditingController();
+  final TextEditingController lastVisitDurationController = TextEditingController();
   String? selectedTerritoryId;
   String? selectedPartnerId;
-
+  String? lastVisitTitle;
+  String? lastVisitDate;
+  String? lastVisitDuration;
   // List to hold multiple product and objective IDs
   List<int> _productIds = [];
   List<int> _leaveBehindIds = [];
@@ -165,7 +170,6 @@ class _CreateVisitCardPageState extends State<CreateVisitCardPage> {
             userId: _monthlyPlanIdController.text
         );
       }
-
       // تحديث بيانات الشركاء
       await partnerInfoCubit.AllfetchPartnerInfo();
     });
@@ -385,7 +389,7 @@ class _CreateVisitCardPageState extends State<CreateVisitCardPage> {
             // فلترة العناصر بناءً على أن التاريخ اليوم أو بعده
             List<Map<String, dynamic>> filteredDailies = todayDailies.where((daily) {
               DateTime dailyDate = DateTime.parse(daily['date']);
-              return dailyDate.isAtSameMomentAs(formattedDateTime) || dailyDate.isAfter(formattedDateTime);
+              return dailyDate.isAtSameMomentAs(formattedDateTime);
             }).toList();
 
             // استخراج التيريتوري الخاصة بكل خطة يومية
@@ -395,6 +399,7 @@ class _CreateVisitCardPageState extends State<CreateVisitCardPage> {
                 dailyTerritories.addAll((daily['territories'] as List<dynamic>).cast<Map<String, dynamic>>());
               }
             }
+
             return Column(
               children: [
                 Row(
@@ -502,134 +507,242 @@ class _CreateVisitCardPageState extends State<CreateVisitCardPage> {
     ) : Container(height: 1,);
   }
 
-  // دالة لإنشاء قائمة من Dropdown للشركاء
+  Future<bool> isValidSpeciality(String specialityName) async {
+    final prefs = await SharedPreferences.getInstance();
+    List<String> savedSpecialities = prefs.getStringList('speciality_names') ?? [];
+    return savedSpecialities.contains(specialityName);
+  }
+
   Widget _buildPartnerDropdown(String id) {
-    TextEditingController _searchController = TextEditingController(); // Controller for the search field
-    List<dynamic> _filteredPartnerData = []; // To hold the filtered data
+    TextEditingController _searchController = TextEditingController();
+    List<dynamic> _filteredPartnerData = [];
 
     return BlocProvider(
       create: (context) => PartnerInfoCubit()..fetchPartnerInfo(id),
-      child: BlocBuilder<PartnerInfoCubit, PartnerInfoState>(builder: (context, state) {
-        if (state is PartnerInfoLoading) {
-          return Center(child: CircularProgressIndicator());
-        } else if (state is PartnerInfoLoadedRaw) {
-          // Filter partners by territory_id
-          final partnerData = state.partnerData
-              .where((partner) => partner['territory_id'] == _selectedTerritoryName)
-              .toList();
+      child: BlocBuilder<PartnerInfoCubit, PartnerInfoState>(
+        builder: (context, state) {
+          if (state is PartnerInfoLoading) {
+            return Center(child: CircularProgressIndicator());
+          } else if (state is PartnerInfoLoadedRaw) {
+            final initialPartnerData = state.partnerData.where((partner) =>
+            partner['territory_id'] == _selectedTerritoryName
+            ).toList();
 
-          // Function to save partner data
-          Future<void> _savePartnerData(List<dynamic> data) async {
-            SharedPreferences prefs = await SharedPreferences.getInstance();
-            prefs.setString('datapartnerforcreatevisit', json.encode(data)); // Use the specified key
-          }
+            return FutureBuilder<List<dynamic>>(
+              future: Future.wait(initialPartnerData.map((partner) async {
+                bool isValid = await isValidSpeciality(partner['speciality']);
+                return isValid ? partner : null;
+              })),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return Center(child: CircularProgressIndicator());
+                }
 
-          // Function to check if data is different
-          bool _isDataDifferent(List<dynamic> newData) {
-            return json.encode(newData) != json.encode(partnerData);
-          }
+                final partnerData = snapshot.data!.where((item) => item != null).toList();
 
-          // Check if the data is different and save it
-          if (_isDataDifferent(partnerData)) {
-            _savePartnerData(partnerData);
-          }
-          if(partnerData.isEmpty){
-            return Center(child:Text("No Contact Found For Selected Territory"));
-          }
+                Future<void> _savePartnerData(List<dynamic> data) async {
+                  SharedPreferences prefs = await SharedPreferences.getInstance();
+                  prefs.setString('datapartnerforcreatevisit', json.encode(data));
+                }
 
-          return Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _searchController,
-                  readOnly: true,
-                  decoration: InputDecoration(
-                    labelText: 'Select Contact',
-                  ),
-                  onTap: () {
-                    showModalBottomSheet(
-                      context: context,
-                      builder: (BuildContext context) {
-                        return StatefulBuilder(
-                          builder: (BuildContext context, StateSetter setState) {
-                            // Filter partner data based on search input
-                            _filteredPartnerData = partnerData
-                                .where((partner) => partner['name'].toLowerCase().contains(_searchController.text.toLowerCase()))
-                                .toList();
+                bool _isDataDifferent(List<dynamic> newData) {
+                  return json.encode(newData) != json.encode(partnerData);
+                }
 
-                            return Column(
-                              children: [
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: TextField(
-                                    controller: _searchController,
-                                    decoration: InputDecoration(
-                                      hintText: 'Search',
-                                      suffixIcon: IconButton(
-                                          icon: Icon(Icons.close),
-                                          onPressed: (){_searchController.clear;}),
-                                      border: OutlineInputBorder(),
-                                    ),
-                                    onChanged: (value) {
-                                      setState(() {
-                                        _filteredPartnerData = partnerData
-                                            .where((partner) => partner['name'].toLowerCase().contains(value.toLowerCase()))
-                                            .toList();
-                                      });
-                                    },
+                if (_isDataDifferent(partnerData)) {
+                  _savePartnerData(partnerData);
+                }
+
+                if(partnerData.isEmpty) {
+                  return Center(child: Text("No Contact Found For Selected Territory"));
+                }
+
+                return Column(
+                  children: [
+                    TextField(
+                      controller: _searchController,
+                      readOnly: true,
+                      decoration: InputDecoration(
+                        labelStyle: TextStyle(fontSize: 12),
+                        hintStyle: TextStyle(fontSize: 12),
+                        floatingLabelStyle: TextStyle(fontSize: 12),
+                        labelText: 'Select Contact',
+                      ),
+                      onTap: () {
+                        showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          builder: (BuildContext context) {
+                            return StatefulBuilder(
+                              builder: (BuildContext context, StateSetter setState) {
+                                _filteredPartnerData = partnerData
+                                    .where((partner) => partner['name']
+                                    .toLowerCase()
+                                    .contains(_searchController.text.toLowerCase()))
+                                    .toList();
+
+                                return Padding(
+                                  padding: const EdgeInsets.only(top: 16.0, bottom: 32.0),
+                                  child: Column(
+                                    children: [
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                                        child: TextField(
+                                          controller: _searchController,
+                                          decoration: InputDecoration(
+                                            hintText: 'Search',
+                                            suffixIcon: IconButton(
+                                              icon: Icon(Icons.close),
+                                              onPressed: () {
+                                                _searchController.clear();
+                                                setState(() {
+                                                  _filteredPartnerData = partnerData;
+                                                });
+                                              },
+                                            ),
+                                            border: OutlineInputBorder(),
+                                          ),
+                                          onChanged: (value) {
+                                            setState(() {
+                                              _filteredPartnerData = partnerData
+                                                  .where((partner) => partner['name']
+                                                  .toLowerCase()
+                                                  .contains(value.toLowerCase()))
+                                                  .toList();
+                                            });
+                                          },
+                                        ),
+                                      ),
+                                      SizedBox(height: 10.0),
+                                      Expanded(
+                                        child: ListView.builder(
+                                          padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                                          itemCount: _filteredPartnerData.length,
+                                          itemBuilder: (context, index) {
+                                            var partner = _filteredPartnerData[index];
+                                            return Padding(
+                                              padding: const EdgeInsets.symmetric(vertical: 4.0),
+                                              child: ListTile(
+                                                contentPadding: EdgeInsets.all(8.0),
+                                                title: Text(
+                                                  partner['name'],
+                                                  style: TextStyle(
+                                                    fontSize: 16,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Colors.blue,
+                                                  ),
+                                                ),
+                                                subtitle: Text(
+                                                  partner['last_visit_title'].toString(),
+                                                  style: TextStyle(
+                                                    fontSize: 14.0,
+                                                    color: Colors.black,
+                                                  ),
+                                                ),
+                                                trailing: Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                                  mainAxisAlignment: MainAxisAlignment.center,
+                                                  children: [
+                                                    Text(
+                                                      partner['last_visit_date'].toString(),
+                                                      style: TextStyle(
+                                                        fontSize: 12.0,
+                                                        color: Colors.blue,
+                                                      ),
+                                                    ),
+                                                    SizedBox(height: 4.0),
+                                                    Text(
+                                                      double.parse(partner['last_visit_duration'].toString()).toStringAsFixed(2),
+                                                      style: TextStyle(
+                                                        fontSize: 11.0,
+                                                        fontWeight: FontWeight.w500,
+                                                        color: Colors.blueGrey.shade800,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                                onTap: () {
+                                                  setState(() {
+                                                    _partnerIdController.text = partner['id'].toString();
+                                                    _searchController.text = '${partner['name']}';
+                                                    lastVisitTitleController.text = partner['last_visit_title'].toString();
+                                                    lastVisitDateController.text = partner['last_visit_date'].toString();
+                                                    lastVisitDurationController.text = double.parse(partner['last_visit_duration'].toString()).toStringAsFixed(2);
+                                                    lastVisitTitle = partner['last_visit_title'].toString();
+                                                    lastVisitDate = partner['last_visit_date'].toString();
+                                                    lastVisitDuration = double.parse(partner['last_visit_duration'].toString()).toStringAsFixed(2);
+                                                  });
+                                                  Navigator.pop(context);
+                                                },
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ),
-                                Expanded(
-                                  child: ListView.builder(
-                                    itemCount: _filteredPartnerData.length,
-                                    itemBuilder: (context, index) {
-                                      var partner = _filteredPartnerData[index];
-                                      return ListTile(
-                                        title: Text(partner['name']),
-                                        onTap: () {
-                                          // Set the selected partner's name and ID
-                                          setState(() {
-                                            _partnerIdController.text = partner['id'].toString(); // Store the ID
-                                            _searchController.text = partner['name']; // Display the partner's name
-                                          });
-                                          Navigator.pop(context); // Close the modal
-                                        },
-                                      );
-                                    },
-                                  ),
-                                ),
-                              ],
+                                );
+                              },
                             );
                           },
                         );
                       },
-                    );
-                  },
-                ),
-              ),
-              IconButton(
-                icon: Icon(Icons.add, color: Colors.blue, size: 22),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => CreatePartnerPlan()),
-                  );
-                },
-              ),
-              IconButton(
-                icon: Icon(Icons.refresh, color: Colors.blue, size: 22),
-                onPressed: () {
-                  // Refresh data
-                  context.read<PartnerInfoCubit>().fetchPartnerInfo(id);
-                },
-              ),
-            ],
-          );
-        } else if (state is PartnerInfoError) {
-          return Center(child: Text('No Data Found.'));
-        }
-        return Center(child: Text('No Data Found'));
-      }),
+                    ),
+                    SizedBox(height: 5,),
+                    lastVisitTitleController.text != 'false' ?
+                    Container(
+                      padding: EdgeInsets.all(12),
+                      margin: EdgeInsets.all(12),
+                      width: MediaQuery.of(context).size.width * 0.85,
+                      decoration: BoxDecoration(
+                        color: Color(0xFFbfcfdb),
+                        borderRadius: BorderRadius.circular(25),
+                        border: Border.all(color: Colors.black, width: 1),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          SizedBox(height: 4,),
+                          TextField(
+                            controller: lastVisitTitleController,
+                            decoration: InputDecoration(
+                              hintText: 'Last Visit Title',
+                              border: OutlineInputBorder(),
+                            ),
+                            readOnly: true,
+                          ),
+                          SizedBox(height: 4,),
+                          TextField(
+                            controller: lastVisitDateController,
+                            decoration: InputDecoration(
+                              hintText: 'Last Visit Date',
+                              border: OutlineInputBorder(),
+                            ),
+                            readOnly: true,
+                          ),
+                          SizedBox(height: 4,),
+                          TextField(
+                            controller: lastVisitDurationController,
+                            decoration: InputDecoration(
+                              hintText: 'Last Visit Duration',
+                              border: OutlineInputBorder(),
+                            ),
+                            readOnly: true,
+                          ),
+                        ],
+                      ),
+                    ) : SizedBox(),
+                  ],
+                );
+              },
+            );
+          } else if (state is PartnerInfoError) {
+            return Center(child: Text('No Data Found.'));
+          }
+          return Center(child: Text('No Data Found'));
+        },
+      ),
     );
   }
 

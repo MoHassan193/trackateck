@@ -30,6 +30,7 @@ late Size mq;
 
 void main() async{
   WidgetsFlutterBinding.ensureInitialized();
+  await AndroidAlarmManager.initialize();
   runApp(const MyApp());
 }
 

@@ -171,7 +171,6 @@ class _CreatePartnerPlanState extends State<CreatePartnerPlan> {
         data: request);
     if (response.statusCode == 200) {
       final data = response.data['data'];
-      Navigator.pop(context);
       DialToast.showToast("Contact Created Successfuly", Colors.green);
     } else if (response.statusCode == 401) {
       DialToast.showToast("Name is already exist", Colors.red);

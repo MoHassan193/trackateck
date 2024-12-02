@@ -230,46 +230,34 @@ class _TaskDetailsPageState extends State<TaskDetailsPage> {
               SizedBox(height: widget.screenHeight * 0.02),
               Divider(color: Colors.cyan, thickness: 1),
               SizedBox(height: widget.screenHeight * 0.02),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    widget.summary,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.cyan,
-                      fontSize: widget.screenHeight * 0.018,
-                    ),
-                  ),
-                ],
+              Text(
+                widget.summary,
+                textAlign: TextAlign.start,
+                style: TextStyle(
+                  color: Colors.cyan,
+                  fontSize: widget.screenHeight * 0.018,
+                ),
               ),
               SizedBox(height: widget.screenHeight * 0.01),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    resultNote.toString(),
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.cyan,
-                      fontSize: widget.screenHeight * 0.018,
-                    ),
-                  ),
-                ],
+              Text(
+                resultNote.toString(),
+                textAlign: TextAlign.start,
+                softWrap: true, // يسمح بتكسر النص إلى سطر جديد
+                maxLines: null, // يسمح للنص بالانتقال إلى عدد غير محدد من السطور
+                style: TextStyle(
+                  overflow: TextOverflow.visible,
+                  color: Colors.cyan,
+                  fontSize: widget.screenHeight * 0.015,
+                ),
               ),
               SizedBox(height: widget.screenHeight * 0.01),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    widget.resModel,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.cyan,
-                      fontSize: widget.screenHeight * 0.018,
-                    ),
-                  ),
-                ],
+              Text(
+                widget.resModel,
+                textAlign: TextAlign.start,
+                style: TextStyle(
+                  color: Colors.cyan,
+                  fontSize: widget.screenHeight * 0.018,
+                ),
               ),
               SizedBox(height: widget.screenHeight * 0.05),
               // زر الضغط الذي يظهر الدايلوج

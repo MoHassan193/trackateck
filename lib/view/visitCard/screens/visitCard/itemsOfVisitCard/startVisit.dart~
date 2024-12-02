@@ -61,21 +61,8 @@ class _StartTimerState extends State<StartTimer> {
     _checkVisitCompletion();  // Add this check
     _canStartVisit = widget.partnerData['check_location'] == false ? true : false;
    _checkScheduledCheckOut();
-    _loadSavedState();
   }
 
-  Future<void> _loadSavedState() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _deactivateLocation = prefs.getBool('deactivateLocation${widget.visitId}') ?? false;
-    });
-  }
-
-  // دالة لحفظ القيمة
-  Future<void> _saveState(bool value) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('deactivateLocation${widget.visitId}', value);
-  }
   @override
   void dispose() {
     _timer?.cancel(); // Cancel the timer when the widget is disposed
